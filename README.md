@@ -1,6 +1,11 @@
 # TypeGear
 Free keyboard for Gear 1, 2.
 
+![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/1.png)
+![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/2.png)
+![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/3.png)
+![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/4.png)
+
 Now supports English, Russian, Українська,  Español, Dutch (Belgiè), Deutsch, Türkçe, Francais languages. 
 
 If you don't have application supports this keyboard, you don't need this. Without apps support it, TypeGear is useless. 
