@@ -30,7 +30,7 @@ Developers features:
 2. privileges needed: application.info, application.launch
 
 ### Usage
-You can include TypeGear SDK 1.0.0 to your project (see attachment below page).
+You can include typeGear-1.0.0.js to your project (see attachment below page).
 
 Example usage:
 
