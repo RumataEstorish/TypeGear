@@ -1,0 +1,2716 @@
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport"
+	content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="description" content="Tizen IME" />
+
+<title>Tizen Wearable IME</title>
+
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/tizenStyle.css" />
+<link rel="stylesheet" href="lib/tau/themes/default/tau.css">
+</head>
+<script type="text/javascript" src="js/main.js"></script>
+<script type="text/javascript" src="lib/tau/js/tau.js"></script>
+<script type="text/javascript" src="js/jquery-1.9.1.js"></script>
+<script>
+	$(window).load(function() {
+
+		var i = 0, j = 0, element = $(".spaceBtn"), funcKeys = $(".numsymBtn");
+		loadSettings();
+
+		document.addEventListener('tizenhwkey', function(e) {
+
+			if (e.keyName == "back") {
+				if (getActivePage() === "languageSettingsPage") {
+					tau.changePage("#mainPage");
+				} else {
+					try {
+						if (reqAppControl !== null) {
+							reqAppControl.replyResult(null);
+						}
+					} catch (e) {
+					}
+
+					tizen.application.getCurrentApplication().exit();
+				}
+			}
+
+		});
+
+		inputModeChanged(prevMode, loadedLanguages[0] + "-lowercase");
+
+		document.getElementById("languageSettingsPage").addEventListener("pagehide", saveSettings);
+
+		//Настройка движений
+		try {
+			for (i = 0; i < funcKeys.length; i++) {
+				tau.event.enableGesture(funcKeys[i], new tau.event.gesture.Swipe({
+					orientation : "vertical"
+				}));
+				funcKeys[i].addEventListener("swipe", function(e) {
+					//inputModeChanged("numsym1", prevMode);
+					tau.changePage("#languageSettingsPage");
+				});
+			}
+
+			for (i = 0; i < element.length; i++) {
+				try {
+
+					tau.event.enableGesture(element[i], new tau.event.gesture.Swipe({
+						orientation : "horizontal"
+					}));
+
+					element[i].addEventListener("swipe", function(e) {
+						if (e.detail.direction === "left") {
+							inputModeChanged(prevMode, getPrevLanguage() + "-lowercase");
+						} else {
+							inputModeChanged(prevMode, getNextLanguage() + "-lowercase");
+						}
+						backspacePressed();
+					});
+				} catch (ex) {
+					alert(ex.message);
+				}
+			}
+		} catch (e) {
+			alert(e.message);
+		}
+
+		passMode = false;
+		singlelinemode = false;
+
+		//Получение настроек
+		getCallApp();
+		for (i = 0; i < callAppControl.data.length; i++) {
+			switch (callAppControl.data[i].key) {
+			case "SET_TEXT":
+				if (isString(callAppControl.data[i].value[0])) {
+					resultText = callAppControl.data[i].value[0];
+				}
+				break;
+			case "SETTINGS":
+				for (j = 0; j < callAppControl.data[i].value.length; j++) {
+					switch (callAppControl.data[i].value[j]) {
+					case "PASSWORD":
+						passMode = true;
+						singlelinemode = true;
+						$("#okTd").remove();
+						$("#inputTd").css("width", "100%");
+						break;
+					case "SINGLE_LINE":
+						singlelinemode = true;
+						$("#okTd").remove();
+						$("#inputTd").css("width", "100%");
+						break;
+					}
+				}
+			}
+		}
+
+		if (passMode) {
+			for (i = 0; i < resultText.length; i++) {
+				$("#inputRes")[0].value += PASSWORDCHAR;
+			}
+		} else {
+			$("#inputRes")[0].value = resultText;
+		}
+	});
+</script>
+<body>
+
+
+	<div class="ui-page" id="languageSettingsPage">
+		<div class="ui-content">
+			<ul class="ui-listview">
+				<li class="li-has-checkbox"><label>English<input
+						type="checkbox" name="tag" value="english" /></label></li>
+				<li class="li-has-checkbox"><label>Русский<input
+						type="checkbox" name="tag" value="russian" /></label></li>
+				<li class="li-has-checkbox"><label>Українська<input 
+						type="checkbox" name="tag" value="ukrainian"/></label></li>
+				<li class="li-has-checkbox"><label>Español<input
+						type="checkbox" name="tag" value="spanish"/></label></li>
+				<li class="li-has-checkbox"><label>Dutch<input
+						type="checkbox" name="tag" value="dutch"/></label></li>
+				<li class="li-has-checkbox"><label>Deutsch<input
+						type="checkbox" name="tag" value="deutsch"/></label></li>
+				<li class="li-has-checkbox"><label>Türkçe<input
+						type="checkbox" name="tag" value="turkish"/></label></li>
+				<li class="li-has-checkbox"><label>Francais<input
+						type="checkbox" name="tag" value="france"/></label></li>
+						
+			</ul>
+		</div>
+	</div>
+
+	<div class="ui-page ui-page-active " id="mainPage">
+		<table class="tbl1" style="border: 0px; border-collapse: collapse;">
+			<tr style="height: 20%">
+				<td id="inputTd" style="width: 85%"><textarea id="inputRes"
+						readonly="readonly" onfocus="textClick()"
+						style="height: 100%; width: 100%; font-size: 180%; border-collapse: collapse; color: #ffffff; border-spacing: 0; border-color: #000000; background-color: #111121;"></textarea>
+				</td>
+				<td id="okTd" style="width: 15%">
+					<button id="okButton" onclick="returnInfo()"
+						class="commonBtn okBtn keyBtn"
+						style="background-image: url(images/tick.png); height: 101%"></button>
+				</td>
+			</tr>
+
+			<tr style="height: 80%">
+				<td colspan="2">
+					<!-- English-lowercase mode -->
+					<div id="english-lowercase" class="visible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('q')"
+												ontouchstart="javascript:keyPressed('q')">q</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('w')"
+												ontouchstart="javascript:keyPressed('w')">w</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('e')"
+												ontouchstart="javascript:keyPressed('e')">e</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('r')"
+												ontouchstart="javascript:keyPressed('r')">r</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('t')"
+												ontouchstart="javascript:keyPressed('t')">t</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('y')"
+												ontouchstart="javascript:keyPressed('y')">y</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('u')"
+												ontouchstart="javascript:keyPressed('u')">u</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('i')"
+												ontouchstart="javascript:keyPressed('i')">i</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('o')"
+												ontouchstart="javascript:keyPressed('o')">o</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('p')"
+												ontouchstart="javascript:keyPressed('p')">p</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('a')"
+												ontouchstart="javascript:keyPressed('a')">a</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('s')"
+												ontouchstart="javascript:keyPressed('s')">s</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('d')"
+												ontouchstart="javascript:keyPressed('d')">d</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('f')"
+												ontouchstart="javascript:keyPressed('f')">f</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('g')"
+												ontouchstart="javascript:keyPressed('g')">g</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('h')"
+												ontouchstart="javascript:keyPressed('h')">h</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('j')"
+												ontouchstart="javascript:keyPressed('j')">j</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('k')"
+												ontouchstart="javascript:keyPressed('k')">k</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('l')"
+												ontouchstart="javascript:keyPressed('l')">l</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('english-lowercase','english-uppercase')"
+												ontouchstart="javascript:inputModeChanged('english-lowercase','english-uppercase')">&nbsp;</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('z')"
+												ontouchstart="javascript:keyPressed('z')">z</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('x')"
+												ontouchstart="javascript:keyPressed('x')">x</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('c')"
+												ontouchstart="javascript:keyPressed('c')">c</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('v')"
+												ontouchstart="javascript:keyPressed('v')">v</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('b')"
+												ontouchstart="javascript:keyPressed('b')">b</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('n')"
+												ontouchstart="javascript:keyPressed('n')">n</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('m')"
+												ontouchstart="javascript:keyPressed('m')">m</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('english-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('english-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div> <!-- /page - English-uppercase mode --> <!-- English-uppercase mode -->
+					<div id="english-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Q')"
+												ontouchstart="javascript:keyPressed('Q')">Q</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('W')"
+												ontouchstart="javascript:keyPressed('W')">W</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('E')"
+												ontouchstart="javascript:keyPressed('E')">E</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('R')"
+												ontouchstart="javascript:keyPressed('R')">R</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('T')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Y')"
+												ontouchstart="javascript:keyPressed('Y')">Y</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('U')"
+												ontouchstart="javascript:keyPressed('U')">U</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('I')"
+												ontouchstart="javascript:keyPressed('I')">I</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('O')"
+												ontouchstart="javascript:keyPressed('O')">O</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('P')"
+												ontouchstart="javascript:keyPressed('P')">P</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('A')"
+												ontouchstart="javascript:keyPressed('A')">A</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('S')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('D')"
+												ontouchstart="javascript:keyPressed('D')">D</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('F')"
+												ontouchstart="javascript:keyPressed('F')">F</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('G')"
+												ontouchstart="javascript:keyPressed('G')">G</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('H')"
+												ontouchstart="javascript:keyPressed('H')">H</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('J')"
+												ontouchstart="javascript:keyPressed('J')">J</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('K')"
+												ontouchstart="javascript:keyPressed('K')">K</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('L')"
+												ontouchstart="javascript:keyPressed('L')">L</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOn"
+												onmousedown="javascript:inputModeChanged('english-uppercase', 'english-lowercase')"
+												ontouchstart="javascript:inputModeChanged('english-uppercase', 'english-lowercase')">&nbsp;
+											</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Z')"
+												ontouchstart="javascript:keyPressed('Z')">Z</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('X')"
+												ontouchstart="javascript:keyPressed('X')">X</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('C')"
+												ontouchstart="javascript:keyPressed('C')">C</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('V')"
+												ontouchstart="javascript:keyPressed('V')">V</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('B')"
+												ontouchstart="javascript:keyPressed('B')">B</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('N')"
+												ontouchstart="javascript:keyPressed('N')">N</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('M')"
+												ontouchstart="javascript:keyPressed('M')">M</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('english-uppercase', 'numsym1')"
+												ontouchstart="javascript:inputModeChanged('english-uppercase', 'numsym1')">123
+											</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div> <!-- /page - English-uppercase mode --> <!-- Numsym mode (1/2)-->
+					<div id="numsym1" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('1')"
+												ontouchstart="javascript:keyPressed('1')">1</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('2')"
+												ontouchstart="javascript:keyPressed('2')">2</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('3')"
+												ontouchstart="javascript:keyPressed('3')">3</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('4')"
+												ontouchstart="javascript:keyPressed('4')">4</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('5')"
+												ontouchstart="javascript:keyPressed('5')">5</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('6')"
+												ontouchstart="javascript:keyPressed('6')">6</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('7')"
+												ontouchstart="javascript:keyPressed('7')">7</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('8')"
+												ontouchstart="javascript:keyPressed('8')">8</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('9')"
+												ontouchstart="javascript:keyPressed('9')">9</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('0')"
+												ontouchstart="javascript:keyPressed('0')">0</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('!')"
+												ontouchstart="javascript:keyPressed('!')">!</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('@')"
+												ontouchstart="javascript:keyPressed('@')">@</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('#')"
+												ontouchstart="javascript:keyPressed('#')">#</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('$')"
+												ontouchstart="javascript:keyPressed('$')">$</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('/')"
+												ontouchstart="javascript:keyPressed('/')">/</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('^')"
+												ontouchstart="javascript:keyPressed('^')">^</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('&')"
+												ontouchstart="javascript:keyPressed('&')">&</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('*')"
+												ontouchstart="javascript:keyPressed('*')">*</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('(')"
+												ontouchstart="javascript:keyPressed('(')">(</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed(')')"
+												ontouchstart="javascript:keyPressed(')')">)</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:keyPressed('')"
+												ontouchstart="javascript:keyPressed('')">&nbsp;</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('-')"
+												ontouchstart="javascript:keyPressed('-')">-</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('\'')"
+												ontouchstart="javascript:keyPressed('\'')">'</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('&quot;')"
+												ontouchstart="javascript:keyPressed('&quot;')">"</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed(':')"
+												ontouchstart="javascript:keyPressed(':')">:</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed(';')"
+												ontouchstart="javascript:keyPressed(';')">;</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('?')"
+												ontouchstart="javascript:keyPressed('?')">?</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn" onmousedown="changeNumInput()"
+												ontouchstart="changeNumInput()">abc</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div> <!-- Russian-lowercase mode --> <!-- /page - Russian-lowercase mode -->
+					<!-- Russian-lowercase -->
+					<div id="russian-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('й')"
+												ontouchstart="javascript:keyPressed('й')">й</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ц')"
+												ontouchstart="javascript:keyPressed('ц')">ц</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('у')"
+												ontouchstart="javascript:keyPressed('у')">у</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('к')"
+												ontouchstart="javascript:keyPressed('к')">к</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('е')"
+												ontouchstart="javascript:keyPressed('е')">е</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('н')"
+												ontouchstart="javascript:keyPressed('н')">н</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('г')"
+												ontouchstart="javascript:keyPressed('г')">г</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ш')"
+												ontouchstart="javascript:keyPressed('ш')">ш</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('щ')"
+												ontouchstart="javascript:keyPressed('щ')">щ</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('з')"
+												ontouchstart="javascript:keyPressed('з')">з</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('х')"
+												ontouchstart="javascript:keyPressed('х')">х</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('ф')"
+												ontouchstart="javascript:keyPressed('ф')">ф</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('ы')"
+												ontouchstart="javascript:keyPressed('ы')">ы</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('в')"
+												ontouchstart="javascript:keyPressed('в')">в</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('а')"
+												ontouchstart="javascript:keyPressed('а')">а</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('п')"
+												ontouchstart="javascript:keyPressed('п')">п</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('р')"
+												ontouchstart="javascript:keyPressed('р')">р</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('о')"
+												ontouchstart="javascript:keyPressed('о')">о</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('л')"
+												ontouchstart="javascript:keyPressed('л')">л</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('д')"
+												ontouchstart="javascript:keyPressed('д')">д</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('ж')"
+												ontouchstart="javascript:keyPressed('ж')">ж</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('з')"
+												ontouchstart="javascript:keyPressed('з')">з</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('russian-lowercase','russian-uppercase')"
+												ontouchstart="javascript:inputModeChanged('russian-lowercase','russian-uppercase')">&nbsp;</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('я')"
+												ontouchstart="javascript:keyPressed('я')">я</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('ч')"
+												ontouchstart="javascript:keyPressed('ч')">ч</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('с')"
+												ontouchstart="javascript:keyPressed('с')">с</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('м')"
+												ontouchstart="javascript:keyPressed('м')">м</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('и')"
+												ontouchstart="javascript:keyPressed('и')">и</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('т')"
+												ontouchstart="javascript:keyPressed('т')">т</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('ь')"
+												ontouchstart="javascript:keyPressed('ь')">ь</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('б')"
+												ontouchstart="javascript:keyPressed('б')">б</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('ю')"
+												ontouchstart="javascript:keyPressed('ю')">ю</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('russian-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('russian-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div> <!-- /page - Russian-uppercase mode --> <!-- Russian-uppercase -->
+					<div id="russian-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Й')"
+												ontouchstart="javascript:keyPressed('Й')">Й</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ц')"
+												ontouchstart="javascript:keyPressed('Ц')">Ц</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('У')"
+												ontouchstart="javascript:keyPressed('У')">У</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('К')"
+												ontouchstart="javascript:keyPressed('К')">К</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Е')"
+												ontouchstart="javascript:keyPressed('Е')">Е</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Н')"
+												ontouchstart="javascript:keyPressed('Н')">Н</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Г')"
+												ontouchstart="javascript:keyPressed('Г')">Г</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ш')"
+												ontouchstart="javascript:keyPressed('Ш')">Ш</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Щ')"
+												ontouchstart="javascript:keyPressed('Щ')">Щ</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('З')"
+												ontouchstart="javascript:keyPressed('З')">З</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Х')"
+												ontouchstart="javascript:keyPressed('Х')">Х</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Ф')"
+												ontouchstart="javascript:keyPressed('Ф')">Ф</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Ы')"
+												ontouchstart="javascript:keyPressed('Ы')">Ы</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('В')"
+												ontouchstart="javascript:keyPressed('В')">В</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('А')"
+												ontouchstart="javascript:keyPressed('А')">А</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('П')"
+												ontouchstart="javascript:keyPressed('П')">П</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Р')"
+												ontouchstart="javascript:keyPressed('Р')">Р</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('О')"
+												ontouchstart="javascript:keyPressed('О')">О</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Л')"
+												ontouchstart="javascript:keyPressed('Л')">Л</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Д')"
+												ontouchstart="javascript:keyPressed('Д')">Д</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Ж')"
+												ontouchstart="javascript:keyPressed('Ж')">Ж</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Э')"
+												ontouchstart="javascript:keyPressed('Э')">Э</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('russian-uppercase','russian-lowercase')"
+												ontouchstart="javascript:inputModeChanged('russian-uppercase','russian-lowercase')">&nbsp;</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Я')"
+												ontouchstart="javascript:keyPressed('Я')">Я</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Ч')"
+												ontouchstart="javascript:keyPressed('Ч')">Ч</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('С')"
+												ontouchstart="javascript:keyPressed('С')">С</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('М')"
+												ontouchstart="javascript:keyPressed('М')">М</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('И')"
+												ontouchstart="javascript:keyPressed('И')">И</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Т')"
+												ontouchstart="javascript:keyPressed('Т')">Т</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Ь')"
+												ontouchstart="javascript:keyPressed('Ь')">Ь</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Б')"
+												ontouchstart="javascript:keyPressed('Б')">Б</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Ю')"
+												ontouchstart="javascript:keyPressed('Ю')">Ю</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('russian-uppercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('russian-uppercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+					
+					<!-- Ukrainian-lowercase -->
+					<div id="ukrainian-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('й')"
+												ontouchstart="javascript:keyPressed('й')">й</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('ц')"
+												ontouchstart="javascript:keyPressed('ц')">ц</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('у')"
+												ontouchstart="javascript:keyPressed('у')">у</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('к')"
+												ontouchstart="javascript:keyPressed('к')">к</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('е')"
+												ontouchstart="javascript:keyPressed('е')">е</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('н')"
+												ontouchstart="javascript:keyPressed('н')">н</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('г')"
+												ontouchstart="javascript:keyPressed('г')">г</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('ш')"
+												ontouchstart="javascript:keyPressed('ш')">ш</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('щ')"
+												ontouchstart="javascript:keyPressed('щ')">щ</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('з')"
+												ontouchstart="javascript:keyPressed('з')">з</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('х')"
+												ontouchstart="javascript:keyPressed('х')">х</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('ї')"
+												ontouchstart="javascript:keyPressed('ї')">ї</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ф')"
+												ontouchstart="javascript:keyPressed('ф')">ф</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('і')"
+												ontouchstart="javascript:keyPressed('і')">і</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('в')"
+												ontouchstart="javascript:keyPressed('в')">в</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('а')"
+												ontouchstart="javascript:keyPressed('а')">а</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('п')"
+												ontouchstart="javascript:keyPressed('п')">п</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('р')"
+												ontouchstart="javascript:keyPressed('р')">р</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('о')"
+												ontouchstart="javascript:keyPressed('о')">о</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('л')"
+												ontouchstart="javascript:keyPressed('л')">л</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('д')"
+												ontouchstart="javascript:keyPressed('д')">д</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ж')"
+												ontouchstart="javascript:keyPressed('ж')">ж</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('є')"
+												ontouchstart="javascript:keyPressed('є')">є</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ґ')"
+												ontouchstart="javascript:keyPressed('ґ')">ґ</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('ukrainian-lowercase','ukrainian-uppercase')"
+												ontouchstart="javascript:inputModeChanged('ukrainian-lowercase','ukrainian-uppercase')">&nbsp;</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('я')"
+												ontouchstart="javascript:keyPressed('я')">я</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('ч')"
+												ontouchstart="javascript:keyPressed('ч')">ч</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('с')"
+												ontouchstart="javascript:keyPressed('с')">с</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('м')"
+												ontouchstart="javascript:keyPressed('м')">м</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('и')"
+												ontouchstart="javascript:keyPressed('и')">и</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('т')"
+												ontouchstart="javascript:keyPressed('т')">т</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('ь')"
+												ontouchstart="javascript:keyPressed('ь')">ь</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('б')"
+												ontouchstart="javascript:keyPressed('б')">б</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('ю')"
+												ontouchstart="javascript:keyPressed('ю')">ю</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('ukrainian-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('ukrainian-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div> 
+					
+					<!-- Ukrainian-uppercase mode -->
+					<div id="ukrainian-uppercase" class="invisible">
+					<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Й')"
+												ontouchstart="javascript:keyPressed('Й')">Й</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Ц')"
+												ontouchstart="javascript:keyPressed('Ц')">Ц</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('У')"
+												ontouchstart="javascript:keyPressed('У')">У</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('К')"
+												ontouchstart="javascript:keyPressed('К')">К</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Е')"
+												ontouchstart="javascript:keyPressed('Е')">Е</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Н')"
+												ontouchstart="javascript:keyPressed('Н')">Н</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Г')"
+												ontouchstart="javascript:keyPressed('Г')">Г</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Ш')"
+												ontouchstart="javascript:keyPressed('Ш')">Ш</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Щ')"
+												ontouchstart="javascript:keyPressed('Ш')">Ш</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('З')"
+												ontouchstart="javascript:keyPressed('З')">З</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Х')"
+												ontouchstart="javascript:keyPressed('Х')">Х</td>
+											<td class="key13 keyBtn"
+												onmousedown="javascript:keyPressed('Ї')"
+												ontouchstart="javascript:keyPressed('Ї')">Ї</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ф')"
+												ontouchstart="javascript:keyPressed('Ф')">Ф</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('І')"
+												ontouchstart="javascript:keyPressed('І')">І</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('В')"
+												ontouchstart="javascript:keyPressed('В')">В</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('А')"
+												ontouchstart="javascript:keyPressed('А')">А</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('П')"
+												ontouchstart="javascript:keyPressed('П')">П</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Р')"
+												ontouchstart="javascript:keyPressed('Р')">Р</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('О')"
+												ontouchstart="javascript:keyPressed('О')">О</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Л')"
+												ontouchstart="javascript:keyPressed('Л')">Л</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Д')"
+												ontouchstart="javascript:keyPressed('Д')">Д</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ж')"
+												ontouchstart="javascript:keyPressed('Ж')">Ж</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Є')"
+												ontouchstart="javascript:keyPressed('Є')">Є</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ґ')"
+												ontouchstart="javascript:keyPressed('Ґ')">Ґ</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('ukrainian-uppercase','ukrainian-lowercase')"
+												ontouchstart="javascript:inputModeChanged('ukrainian-uppercase','ukrainian-lowercase')">&nbsp;</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Я')"
+												ontouchstart="javascript:keyPressed('Я')">Я</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Ч')"
+												ontouchstart="javascript:keyPressed('Ч')">Ч</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('С')"
+												ontouchstart="javascript:keyPressed('С')">С</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('М')"
+												ontouchstart="javascript:keyPressed('М')">М</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('И')"
+												ontouchstart="javascript:keyPressed('И')">И</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Т')"
+												ontouchstart="javascript:keyPressed('Т')">Т</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Ь')"
+												ontouchstart="javascript:keyPressed('Ь')">Ь</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Б')"
+												ontouchstart="javascript:keyPressed('Б')">Б</td>
+											<td class="key9 keyBtn"
+												onmousedown="javascript:keyPressed('Ю')"
+												ontouchstart="javascript:keyPressed('Ю')">Ю</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('ukrainian-uppercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('ukrainian-uppercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+				
+					<!-- Spanish-lowercase mode -->
+					<div id="spanish-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('q')"
+												ontouchstart="javascript:keyPressed('q')">q</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('w')"
+												ontouchstart="javascript:keyPressed('w')">w</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('e')"
+												ontouchstart="javascript:keyPressed('e')">e</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('r')"
+												ontouchstart="javascript:keyPressed('r')">r</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('t')"
+												ontouchstart="javascript:keyPressed('t')">t</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('y')"
+												ontouchstart="javascript:keyPressed('y')">y</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('u')"
+												ontouchstart="javascript:keyPressed('u')">u</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('i')"
+												ontouchstart="javascript:keyPressed('i')">i</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('o')"
+												ontouchstart="javascript:keyPressed('o')">o</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('p')"
+												ontouchstart="javascript:keyPressed('p')">p</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('a')"
+												ontouchstart="javascript:keyPressed('a')">a</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('s')"
+												ontouchstart="javascript:keyPressed('s')">s</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('d')"
+												ontouchstart="javascript:keyPressed('d')">d</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('f')"
+												ontouchstart="javascript:keyPressed('f')">f</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('g')"
+												ontouchstart="javascript:keyPressed('g')">g</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('h')"
+												ontouchstart="javascript:keyPressed('h')">h</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('j')"
+												ontouchstart="javascript:keyPressed('j')">j</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('k')"
+												ontouchstart="javascript:keyPressed('k')">k</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('l')"
+												ontouchstart="javascript:keyPressed('l')">l</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('ñ')"
+												ontouchstart="javascript:keyPressed('ñ')">ñ</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('spanish-lowercase','spanish-uppercase')"
+												ontouchstart="javascript:inputModeChanged('spanish-lowercase','spanish-uppercase')">&nbsp;</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('z')"
+												ontouchstart="javascript:keyPressed('z')">z</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('x')"
+												ontouchstart="javascript:keyPressed('x')">x</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('c')"
+												ontouchstart="javascript:keyPressed('c')">c</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('v')"
+												ontouchstart="javascript:keyPressed('v')">v</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('b')"
+												ontouchstart="javascript:keyPressed('b')">b</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('n')"
+												ontouchstart="javascript:keyPressed('n')">n</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('m')"
+												ontouchstart="javascript:keyPressed('m')">m</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('spanish-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('spanish-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+					
+					<!-- Spanish-uppercase mode -->
+					<div id="spanish-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Q')"
+												ontouchstart="javascript:keyPressed('Q')">Q</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('W')"
+												ontouchstart="javascript:keyPressed('W')">W</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('E')"
+												ontouchstart="javascript:keyPressed('E')">E</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('R')"
+												ontouchstart="javascript:keyPressed('R')">R</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('T')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Y')"
+												ontouchstart="javascript:keyPressed('Y')">Y</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('U')"
+												ontouchstart="javascript:keyPressed('U')">U</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('I')"
+												ontouchstart="javascript:keyPressed('I')">I</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('O')"
+												ontouchstart="javascript:keyPressed('O')">O</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('P')"
+												ontouchstart="javascript:keyPressed('P')">P</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('A')"
+												ontouchstart="javascript:keyPressed('A')">A</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('S')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('D')"
+												ontouchstart="javascript:keyPressed('D')">D</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('F')"
+												ontouchstart="javascript:keyPressed('F')">F</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('G')"
+												ontouchstart="javascript:keyPressed('G')">G</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('H')"
+												ontouchstart="javascript:keyPressed('H')">H</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('J')"
+												ontouchstart="javascript:keyPressed('J')">J</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('K')"
+												ontouchstart="javascript:keyPressed('K')">K</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('L')"
+												ontouchstart="javascript:keyPressed('L')">L</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Ñ')"
+												ontouchstart="javascript:keyPressed('Ñ')">Ñ</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOn"
+												onmousedown="javascript:inputModeChanged('spanish-uppercase', 'spanish-lowercase')"
+												ontouchstart="javascript:inputModeChanged('spanish-uppercase', 'spanish-lowercase')">&nbsp;
+											</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Z')"
+												ontouchstart="javascript:keyPressed('Z')">Z</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('X')"
+												ontouchstart="javascript:keyPressed('X')">X</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('C')"
+												ontouchstart="javascript:keyPressed('C')">C</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('V')"
+												ontouchstart="javascript:keyPressed('V')">V</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('B')"
+												ontouchstart="javascript:keyPressed('B')">B</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('N')"
+												ontouchstart="javascript:keyPressed('N')">N</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('M')"
+												ontouchstart="javascript:keyPressed('M')">M</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('spanish-uppercase', 'numsym1')"
+												ontouchstart="javascript:inputModeChanged('spanish-uppercase', 'numsym1')">123
+											</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+				
+				    <!-- Dutch-lowercase mode -->
+					<div id="dutch-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('a')"
+												ontouchstart="javascript:keyPressed('a')">a</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('z')"
+												ontouchstart="javascript:keyPressed('z')">z</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('e')"
+												ontouchstart="javascript:keyPressed('e')">e</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('r')"
+												ontouchstart="javascript:keyPressed('r')">r</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('t')"
+												ontouchstart="javascript:keyPressed('t')">t</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('y')"
+												ontouchstart="javascript:keyPressed('y')">y</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('u')"
+												ontouchstart="javascript:keyPressed('u')">u</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('i')"
+												ontouchstart="javascript:keyPressed('i')">i</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('o')"
+												ontouchstart="javascript:keyPressed('o')">o</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('p')"
+												ontouchstart="javascript:keyPressed('p')">p</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('é')"
+												ontouchstart="javascript:keyPressed('é')">é</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('q')"
+												ontouchstart="javascript:keyPressed('q')">q</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('s')"
+												ontouchstart="javascript:keyPressed('s')">s</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('d')"
+												ontouchstart="javascript:keyPressed('d')">d</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('f')"
+												ontouchstart="javascript:keyPressed('f')">f</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('g')"
+												ontouchstart="javascript:keyPressed('g')">g</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('h')"
+												ontouchstart="javascript:keyPressed('h')">h</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('j')"
+												ontouchstart="javascript:keyPressed('j')">j</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('k')"
+												ontouchstart="javascript:keyPressed('k')">k</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('l')"
+												ontouchstart="javascript:keyPressed('l')">l</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('m')"
+												ontouchstart="javascript:keyPressed('m')">m</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ù')"
+												ontouchstart="javascript:keyPressed('ù')">ù</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('dutch-lowercase','dutch-uppercase')"
+												ontouchstart="javascript:inputModeChanged('dutch-lowercase','dutch-uppercase')">&nbsp;</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('w')"
+												ontouchstart="javascript:keyPressed('w')">w</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('x')"
+												ontouchstart="javascript:keyPressed('x')">x</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('c')"
+												ontouchstart="javascript:keyPressed('c')">c</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('v')"
+												ontouchstart="javascript:keyPressed('v')">v</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('b')"
+												ontouchstart="javascript:keyPressed('b')">b</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('n')"
+												ontouchstart="javascript:keyPressed('n')">n</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('è')"
+												ontouchstart="javascript:keyPressed('è')">è</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('à')"
+												ontouchstart="javascript:keyPressed('à')">à</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('dutch-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('dutch-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+					
+					<!-- Dutch-uppercase mode-->
+					<div id="dutch-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('A')"
+												ontouchstart="javascript:keyPressed('A')">A</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Z')"
+												ontouchstart="javascript:keyPressed('Z')">Z</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('E')"
+												ontouchstart="javascript:keyPressed('E')">E</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('R')"
+												ontouchstart="javascript:keyPressed('R')">R</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('T')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Y')"
+												ontouchstart="javascript:keyPressed('Y')">Y</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('U')"
+												ontouchstart="javascript:keyPressed('U')">U</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('I')"
+												ontouchstart="javascript:keyPressed('I')">I</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('O')"
+												ontouchstart="javascript:keyPressed('O')">O</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('P')"
+												ontouchstart="javascript:keyPressed('P')">P</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('É')"
+												ontouchstart="javascript:keyPressed('É')">É</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Q')"
+												ontouchstart="javascript:keyPressed('Q')">Q</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('S')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('D')"
+												ontouchstart="javascript:keyPressed('D')">D</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('F')"
+												ontouchstart="javascript:keyPressed('F')">F</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('G')"
+												ontouchstart="javascript:keyPressed('G')">G</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('H')"
+												ontouchstart="javascript:keyPressed('H')">H</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('J')"
+												ontouchstart="javascript:keyPressed('J')">J</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('K')"
+												ontouchstart="javascript:keyPressed('K')">K</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('L')"
+												ontouchstart="javascript:keyPressed('L')">L</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('M')"
+												ontouchstart="javascript:keyPressed('M')">M</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ù')"
+												ontouchstart="javascript:keyPressed('Ù')">Ù</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOn"
+												onmousedown="javascript:inputModeChanged('dutch-uppercase', 'dutch-lowercase')"
+												ontouchstart="javascript:inputModeChanged('dutch-uppercase', 'dutch-lowercase')">&nbsp;
+											</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('W')"
+												ontouchstart="javascript:keyPressed('W')">W</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('X')"
+												ontouchstart="javascript:keyPressed('X')">X</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('C')"
+												ontouchstart="javascript:keyPressed('C')">C</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('V')"
+												ontouchstart="javascript:keyPressed('V')">V</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('B')"
+												ontouchstart="javascript:keyPressed('B')">B</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('N')"
+												ontouchstart="javascript:keyPressed('N')">N</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('È')"
+												ontouchstart="javascript:keyPressed('È')">È</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('À')"
+												ontouchstart="javascript:keyPressed('À')">À</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('dutch-uppercase', 'numsym1')"
+												ontouchstart="javascript:inputModeChanged('dutch-uppercase', 'numsym1')">123
+											</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+				
+				   	<!-- Deutsch-lowercase mode -->
+					<div id="deutsch-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('q')"
+												ontouchstart="javascript:keyPressed('q')">q</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('w')"
+												ontouchstart="javascript:keyPressed('w')">w</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('e')"
+												ontouchstart="javascript:keyPressed('e')">e</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('r')"
+												ontouchstart="javascript:keyPressed('r')">r</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('t')"
+												ontouchstart="javascript:keyPressed('t')">t</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('z')"
+												ontouchstart="javascript:keyPressed('z')">z</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('u')"
+												ontouchstart="javascript:keyPressed('u')">u</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('i')"
+												ontouchstart="javascript:keyPressed('i')">i</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('o')"
+												ontouchstart="javascript:keyPressed('o')">o</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('p')"
+												ontouchstart="javascript:keyPressed('p')">p</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('ü')"
+												ontouchstart="javascript:keyPressed('ü)">ü</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('a')"
+												ontouchstart="javascript:keyPressed('a')">a</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('s')"
+												ontouchstart="javascript:keyPressed('s')">s</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('d')"
+												ontouchstart="javascript:keyPressed('d')">d</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('f')"
+												ontouchstart="javascript:keyPressed('f')">f</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('g')"
+												ontouchstart="javascript:keyPressed('g')">g</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('h')"
+												ontouchstart="javascript:keyPressed('h')">h</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('j')"
+												ontouchstart="javascript:keyPressed('j')">j</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('k')"
+												ontouchstart="javascript:keyPressed('k')">k</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('l')"
+												ontouchstart="javascript:keyPressed('l')">l</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ö')"
+												ontouchstart="javascript:keyPressed('ö')">ö</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ä')"
+												ontouchstart="javascript:keyPressed('ä')">ä</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('deutsch-lowercase','deutsch-uppercase')"
+												ontouchstart="javascript:inputModeChanged('deutsch-lowercase','deutsch-uppercase')">&nbsp;</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('y')"
+												ontouchstart="javascript:keyPressed('y')">y</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('x')"
+												ontouchstart="javascript:keyPressed('x')">x</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('c')"
+												ontouchstart="javascript:keyPressed('c')">c</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('v')"
+												ontouchstart="javascript:keyPressed('v')">v</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('b')"
+												ontouchstart="javascript:keyPressed('b')">b</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('n')"
+												ontouchstart="javascript:keyPressed('n')">n</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('m')"
+												ontouchstart="javascript:keyPressed('m')">m</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('deutsch-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('deutsch-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+					
+					<!-- Deutsch-uppercase mode -->
+					<div id="deutsch-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Q')"
+												ontouchstart="javascript:keyPressed('Q')">Q</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('W')"
+												ontouchstart="javascript:keyPressed('W')">W</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('E')"
+												ontouchstart="javascript:keyPressed('E')">E</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('R')"
+												ontouchstart="javascript:keyPressed('R')">R</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('T')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Z')"
+												ontouchstart="javascript:keyPressed('Z')">Z</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('U')"
+												ontouchstart="javascript:keyPressed('U')">U</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('I')"
+												ontouchstart="javascript:keyPressed('I')">I</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('O')"
+												ontouchstart="javascript:keyPressed('O')">O</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('P')"
+												ontouchstart="javascript:keyPressed('P')">P</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Ü')"
+												ontouchstart="javascript:keyPressed('Ü')">Ü</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('A')"
+												ontouchstart="javascript:keyPressed('A')">A</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('S')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('D')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('F')"
+												ontouchstart="javascript:keyPressed('F')">F</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('G')"
+												ontouchstart="javascript:keyPressed('G')">G</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('H')"
+												ontouchstart="javascript:keyPressed('H')">H</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('J')"
+												ontouchstart="javascript:keyPressed('J')">J</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('K')"
+												ontouchstart="javascript:keyPressed('K')">K</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('L')"
+												ontouchstart="javascript:keyPressed('L')">L</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ö')"
+												ontouchstart="javascript:keyPressed('Ö')">Ö</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ä')"
+												ontouchstart="javascript:keyPressed('Ä')">Ä</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOn"
+												onmousedown="javascript:inputModeChanged('deutsch-uppercase', 'deutsch-lowercase')"
+												ontouchstart="javascript:inputModeChanged('deutsch-uppercase', 'deutsch-lowercase')">&nbsp;
+											</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('Y')"
+												ontouchstart="javascript:keyPressed('Y')">Y</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('X')"
+												ontouchstart="javascript:keyPressed('X')">X</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('C')"
+												ontouchstart="javascript:keyPressed('C')">C</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('V')"
+												ontouchstart="javascript:keyPressed('V')">V</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('B')"
+												ontouchstart="javascript:keyPressed('B')">B</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('N')"
+												ontouchstart="javascript:keyPressed('N')">N</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('M')"
+												ontouchstart="javascript:keyPressed('M')">M</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('deutsch-uppercase', 'numsym1')"
+												ontouchstart="javascript:inputModeChanged('deutsch-uppercase', 'numsym1')">123
+											</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+				
+					<!-- Turkish-lowercase mode -->
+					<div id="turkish-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('q')"
+												ontouchstart="javascript:keyPressed('q')">q</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('w')"
+												ontouchstart="javascript:keyPressed('w')">w</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('e')"
+												ontouchstart="javascript:keyPressed('e')">e</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('r')"
+												ontouchstart="javascript:keyPressed('r')">r</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('t')"
+												ontouchstart="javascript:keyPressed('t')">t</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('y')"
+												ontouchstart="javascript:keyPressed('y')">y</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('u')"
+												ontouchstart="javascript:keyPressed('u')">u</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ı')"
+												ontouchstart="javascript:keyPressed('ı')">ı</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('o')"
+												ontouchstart="javascript:keyPressed('o')">o</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('p')"
+												ontouchstart="javascript:keyPressed('p')">p</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ğ')"
+												ontouchstart="javascript:keyPressed('ğ')">ğ</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ü')"
+												ontouchstart="javascript:keyPressed('ü')">ü</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('a')"
+												ontouchstart="javascript:keyPressed('a')">a</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('s')"
+												ontouchstart="javascript:keyPressed('s')">s</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('d')"
+												ontouchstart="javascript:keyPressed('d')">d</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('f')"
+												ontouchstart="javascript:keyPressed('f')">f</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('g')"
+												ontouchstart="javascript:keyPressed('g')">g</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('h')"
+												ontouchstart="javascript:keyPressed('h')">h</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('j')"
+												ontouchstart="javascript:keyPressed('j')">j</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('k')"
+												ontouchstart="javascript:keyPressed('k')">k</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('l')"
+												ontouchstart="javascript:keyPressed('l')">l</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ş')"
+												ontouchstart="javascript:keyPressed('ş')">ş</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('i')"
+												ontouchstart="javascript:keyPressed('i')">i</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('turkish-lowercase','turkish-uppercase')"
+												ontouchstart="javascript:inputModeChanged('turkish-lowercase','turkish-uppercase')">&nbsp;</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('z')"
+												ontouchstart="javascript:keyPressed('z')">z</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('x')"
+												ontouchstart="javascript:keyPressed('x')">x</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('c')"
+												ontouchstart="javascript:keyPressed('c')">c</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('v')"
+												ontouchstart="javascript:keyPressed('v')">v</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('b')"
+												ontouchstart="javascript:keyPressed('b')">b</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('n')"
+												ontouchstart="javascript:keyPressed('n')">n</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('m')"
+												ontouchstart="javascript:keyPressed('m')">m</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ö')"
+												ontouchstart="javascript:keyPressed('ö')">ö</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ç')"
+												ontouchstart="javascript:keyPressed('ç')">ç</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('turkish-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('turkish-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+					
+					<!-- Turkish-uppercase mode-->
+					<div id="turkish-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Q')"
+												ontouchstart="javascript:keyPressed('Q')">Q</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('W')"
+												ontouchstart="javascript:keyPressed('W')">W</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('E')"
+												ontouchstart="javascript:keyPressed('E')">E</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('R')"
+												ontouchstart="javascript:keyPressed('R')">R</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('T')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Y')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('U')"
+												ontouchstart="javascript:keyPressed('U')">U</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('I')"
+												ontouchstart="javascript:keyPressed('I')">I</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('O')"
+												ontouchstart="javascript:keyPressed('O')">O</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('P')"
+												ontouchstart="javascript:keyPressed('P')">P</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ğ')"
+												ontouchstart="javascript:keyPressed('Ğ')">Ğ</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ü')"
+												ontouchstart="javascript:keyPressed('Ü')">Ü</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('A')"
+												ontouchstart="javascript:keyPressed('A')">A</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('S')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('D')"
+												ontouchstart="javascript:keyPressed('D')">D</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('F')"
+												ontouchstart="javascript:keyPressed('F')">F</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('G')"
+												ontouchstart="javascript:keyPressed('G')">G</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('H')"
+												ontouchstart="javascript:keyPressed('H')">H</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('J')"
+												ontouchstart="javascript:keyPressed('J')">J</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('K')"
+												ontouchstart="javascript:keyPressed('K')">K</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('L')"
+												ontouchstart="javascript:keyPressed('L')">L</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ş')"
+												ontouchstart="javascript:keyPressed('Ş')">Ş</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('İ')"
+												ontouchstart="javascript:keyPressed('İ')">İ</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOn"
+												onmousedown="javascript:inputModeChanged('turkish-uppercase', 'turkish-lowercase')"
+												ontouchstart="javascript:inputModeChanged('turkish-uppercase', 'turkish-lowercase')">&nbsp;
+											</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Z')"
+												ontouchstart="javascript:keyPressed('Z')">Z</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('X')"
+												ontouchstart="javascript:keyPressed('X')">X</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('C')"
+												ontouchstart="javascript:keyPressed('C')">C</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('V')"
+												ontouchstart="javascript:keyPressed('V')">V</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('B')"
+												ontouchstart="javascript:keyPressed('B')">B</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('N')"
+												ontouchstart="javascript:keyPressed('N')">N</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('M')"
+												ontouchstart="javascript:keyPressed('M')">M</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ö')"
+												ontouchstart="javascript:keyPressed('Ö')">Ö</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ç')"
+												ontouchstart="javascript:keyPressed('Ç')">Ç</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('turkish-uppercase', 'numsym1')"
+												ontouchstart="javascript:inputModeChanged('turkish-uppercase', 'numsym1')">123
+											</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+				
+					<!-- France-lowercase mode -->
+					<div id="france-lowercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('a')"
+												ontouchstart="javascript:keyPressed('a')">a</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('z')"
+												ontouchstart="javascript:keyPressed('z')">z</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('e')"
+												ontouchstart="javascript:keyPressed('e')">e</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('r')"
+												ontouchstart="javascript:keyPressed('r')">r</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('t')"
+												ontouchstart="javascript:keyPressed('t')">t</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('y')"
+												ontouchstart="javascript:keyPressed('y')">y</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('u')"
+												ontouchstart="javascript:keyPressed('u')">u</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('i')"
+												ontouchstart="javascript:keyPressed('i')">i</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('o')"
+												ontouchstart="javascript:keyPressed('o')">o</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('p')"
+												ontouchstart="javascript:keyPressed('p')">p</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('é')"
+												ontouchstart="javascript:keyPressed('é')">é</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('q')"
+												ontouchstart="javascript:keyPressed('q')">q</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('s')"
+												ontouchstart="javascript:keyPressed('s')">s</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('d')"
+												ontouchstart="javascript:keyPressed('d')">d</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('f')"
+												ontouchstart="javascript:keyPressed('f')">f</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('g')"
+												ontouchstart="javascript:keyPressed('g')">g</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('h')"
+												ontouchstart="javascript:keyPressed('h')">h</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('j')"
+												ontouchstart="javascript:keyPressed('j')">j</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('k')"
+												ontouchstart="javascript:keyPressed('k')">k</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('l')"
+												ontouchstart="javascript:keyPressed('l')">l</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('m')"
+												ontouchstart="javascript:keyPressed('m')">m</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('ù')"
+												ontouchstart="javascript:keyPressed('ù')">ù</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOff"
+												onmousedown="javascript:inputModeChanged('france-lowercase','france-uppercase')"
+												ontouchstart="javascript:inputModeChanged('france-lowercase','france-uppercase')">&nbsp;</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('w')"
+												ontouchstart="javascript:keyPressed('w')">w</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('x')"
+												ontouchstart="javascript:keyPressed('x')">x</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('c')"
+												ontouchstart="javascript:keyPressed('c')">c</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('v')"
+												ontouchstart="javascript:keyPressed('v')">v</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('b')"
+												ontouchstart="javascript:keyPressed('b')">b</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('n')"
+												ontouchstart="javascript:keyPressed('n')">n</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('è')"
+												ontouchstart="javascript:keyPressed('è')">è</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('à')"
+												ontouchstart="javascript:keyPressed('à')">à</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('france-lowercase','numsym1')"
+												ontouchstart="javascript:inputModeChanged('france-lowercase','numsym1')">123</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+					
+					<!-- France-uppercase mode -->
+					<div id="france-uppercase" class="invisible">
+						<table class="tbl1">
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('A')"
+												ontouchstart="javascript:keyPressed('A')">A</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Z')"
+												ontouchstart="javascript:keyPressed('Z')">Z</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('E')"
+												ontouchstart="javascript:keyPressed('E')">E</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('R')"
+												ontouchstart="javascript:keyPressed('R')">R</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('T')"
+												ontouchstart="javascript:keyPressed('T')">T</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('Y')"
+												ontouchstart="javascript:keyPressed('Y')">Y</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('U')"
+												ontouchstart="javascript:keyPressed('U')">U</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('I')"
+												ontouchstart="javascript:keyPressed('I')">I</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('O')"
+												ontouchstart="javascript:keyPressed('O')">O</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('P')"
+												ontouchstart="javascript:keyPressed('P')">P</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('É')"
+												ontouchstart="javascript:keyPressed('É')">É</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key5"></td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Q')"
+												ontouchstart="javascript:keyPressed('Q')">Q</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('S')"
+												ontouchstart="javascript:keyPressed('S')">S</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('D')"
+												ontouchstart="javascript:keyPressed('D')">D</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('F')"
+												ontouchstart="javascript:keyPressed('F')">F</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('G')"
+												ontouchstart="javascript:keyPressed('G')">G</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('H')"
+												ontouchstart="javascript:keyPressed('H')">H</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('J')"
+												ontouchstart="javascript:keyPressed('J')">J</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('K')"
+												ontouchstart="javascript:keyPressed('K')">K</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('L')"
+												ontouchstart="javascript:keyPressed('L')">L</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('M')"
+												ontouchstart="javascript:keyPressed('M')">M</td>
+											<td class="key12 keyBtn"
+												onmousedown="javascript:keyPressed('Ù')"
+												ontouchstart="javascript:keyPressed('Ù')">Ù</td>
+											<td class="key5"></td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 shiftBtnOn"
+												onmousedown="javascript:inputModeChanged('france-uppercase', 'france-lowercase')"
+												ontouchstart="javascript:inputModeChanged('france-uppercase', 'france-lowercase')">&nbsp;
+											</td>
+											<td class="key10 keyBtn"
+												onmousedown="javascript:keyPressed('W')"
+												ontouchstart="javascript:keyPressed('W')">W</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('X')"
+												ontouchstart="javascript:keyPressed('X')">X</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('C')"
+												ontouchstart="javascript:keyPressed('C')">C</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('V')"
+												ontouchstart="javascript:keyPressed('V')">V</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('B')"
+												ontouchstart="javascript:keyPressed('B')">B</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('N')"
+												ontouchstart="javascript:keyPressed('N')">N</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('È')"
+												ontouchstart="javascript:keyPressed('È')">È</td>
+											<td class="key11 keyBtn"
+												onmousedown="javascript:keyPressed('À')"
+												ontouchstart="javascript:keyPressed('À')">À</td>
+											<td class="key15 backspaceBtn"
+												onmousedown="javascript:backspacePressed()"
+												ontouchstart="javascript:backspacePressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+							<tr class="tr25">
+								<td class="td25">
+									<table class="tbl1">
+										<tr class="tr100">
+											<td class="key15 numsymBtn"
+												onmousedown="javascript:inputModeChanged('france-uppercase', 'numsym1')"
+												ontouchstart="javascript:inputModeChanged('france-uppercase', 'numsym1')">123
+											</td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed(',')"
+												ontouchstart="javascript:keyPressed(',')">,</td>
+											<td class="key40 spaceBtn"
+												onmousedown="javascript:spacePressed()"
+												ontouchstart="javascript:spacePressed()"></td>
+											<td class="key15 functionKeyBtn"
+												onmousedown="javascript:keyPressed('.')"
+												ontouchstart="javascript:keyPressed('.')">.</td>
+											<td class="key15 enterBtn"
+												onmousedown="javascript:enterPressed()"
+												ontouchstart="javascript:enterPressed()">&nbsp;</td>
+										</tr>
+									</table>
+								</td>
+							</tr>
+						</table>
+					</div>
+				</td>
+			</tr>
+		</table>
+	</div>
+</body>
+</html>

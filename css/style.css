@@ -1,0 +1,193 @@
+/* CSS for web keyboard */
+body {
+	background: #111121;
+	margin: 0;
+	margin-top: 0px;
+	padding: 0;
+	overflow-y: hidden;
+	border-spacing: 0;
+	border-radius: 0px;
+	border-collapse: collapse;
+}
+
+.okBtn {
+	color: #ffffff;
+	background-size: auto 20;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-color: #717171;
+	width: 100%;
+	height: 100%;
+	-moz-border-radius: 1px;
+	-webkit-border-radius: 1px;
+	border-radius: 1px;
+	border: 1px solid #414141;
+	border-spacing: 0;
+	width: 100%;
+}
+
+.tbl1 {
+	border: 0px;
+	border-spacing: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.tr25 .td25 {
+	height: 25%;
+}
+
+.tr100 {
+	height: 100%;
+}
+
+.key5 {
+	width: 5%;
+	align: center;
+}
+
+.key10 {
+	width: 10%;
+	align: center;
+}
+
+.key12 {
+	width: 7%;
+	align: center;
+}
+
+.key13 {
+	width: 5%;
+	align: center;
+}
+
+.key11 {
+	width: 8%;
+	align: center;
+}
+
+.key9 {
+	width: 8%;
+	align: center;
+}
+
+.key15 {
+	width: 15%;
+	align: center;
+}
+
+.key40 {
+	width: 40%;
+	align: center;
+}
+
+.visible {
+	background-color: #111124;
+	display: block;
+	height: 100%;
+}
+
+.invisible {
+	background-color: #111124;
+	display: none;
+	height: 100%;
+}
+/* common properties for key */
+.commonBtn,.keyBtn,.keyExBtn,.numsymKeyBtn,.shiftBtnOff,.shiftBtnOn,.backspaceBtn,.languageBtn,.spaceBtn,.dotBtn,.enterBtn,.numsymBtn,.functionKeyBtn
+	{
+	-moz-border-radius: 2px;
+	-webkit-border-radius: 2px;
+	border-radius: 2px;
+	border: 1px solid #414141;
+	display: inline-block;
+	text-align: center;
+	cursor: pointer;
+	color: #ffffff;
+	font-size: 140%;
+	font-family: arial;
+	text-decoration: none;
+	text-shadow: 0pt 1pt 0pt #263666;
+	height: 100%;
+}
+
+.commonBtn:active,.keyBtn:active,.keyExBtn:active,.functionKeyBtn:active,.backspaceBtn:active,.spaceBtn:active,.dotBtn:active,.enterBtn:active
+	{
+	background-color: #717171;
+	position: relative;
+	top: -11px;
+}
+/* normal ascii key button */
+.keyBtn {
+	background-color: #3d3d3d;
+}
+/* lowercase english key button */
+.keyExBtn {
+	background-color: #3d3d3d;
+	font-size: 200%;
+}
+/* numsym key button */
+.numsymKeyBtn {
+	background-color: inherit;
+	font-size: 200%;
+}
+/* normal ascii key button */
+.functionKeyBtn {
+	background-color: inherit;
+	font-size: 130%;
+}
+/* shift button */
+.shiftBtnOff {
+	background: url(../images/icon_shift.png);
+	background-size: auto 60%;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+/* shift button */
+.shiftBtnOn {
+	background: url(../images/icon_shift_on.png);
+	background-size: auto 60%;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+/* backspace button */
+.backspaceBtn {
+	background: url(../images/icon_back.png);
+	background-repeat: no-repeat;
+	background-size: auto 60%;
+	background-position: center;
+}
+/* language button */
+.languageBtn {
+	background: url(../images/icon_language.png);
+	background-repeat: no-repeat;
+	background-size: auto 60%;
+	background-position: center;
+}
+/* numsym button */
+.numsymBtn {
+	background-color: #111121;
+	font-size: 120%;
+	background-repeat: no-repeat;
+	background-size: auto 20%;
+	background-position: 95% 10%;
+	background-image: url(/images/gear.png);
+}
+/* space button */
+.spaceBtn {
+	background-repeat: no-repeat;
+	background-size: auto 20%;
+	background-position: 95% 50%;
+	background-image: url(/images/globe.png);
+}
+/* dot button */
+.dotBtn {
+	background-color: #111121;
+	font-size: 100%;
+}
+/* enter button */
+.enterBtn {
+	background: url(../images/icon_enter.png);
+	background-repeat: no-repeat;
+	background-size: auto 60%;
+	background-position: center;
+}
