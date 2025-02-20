@@ -1,10 +1,10 @@
 # TypeGear
 Free keyboard for Gear 1, 2.
 
-![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/1.png)
-![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/2.png)
-![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/3.png)
-![](https://github.com/RumataEstorish/TypeGear/blob/master/screenshots/4.png)
+![](/screenshots/1.png)
+![](/screenshots/2.png)
+![](/screenshots/3.png)
+![](/screenshots/4.png)
 
 Now supports English, Russian, Українська,  Español, Dutch (Belgiè), Deutsch, Türkçe, Francais languages. 
 
